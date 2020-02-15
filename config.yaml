@@ -7,6 +7,12 @@ singleuser:
     EDITOR: "vim"
     GRANT_SUDO: "yes"
     user: "root"
+  memory:
+    limit: 4G
+    guarantee: 1G
+  cpu:
+    limit: 1
+    guarantee: .5
   image:
     name: registry.cn-hangzhou.aliyuncs.com/taylor/tensorflow-argo
     tag: latest
@@ -15,7 +21,6 @@ singleuser:
       description: "Tensorflow environment with CPU node"
       default: true
       kubespawner_override:
-        image: registry.cn-hangzhou.aliyuncs.com/taylor/tensorflow-argo:latest
         extra_resource_limits:
           nvidia.com/gpu: "0"
     - display_name: "Tensorflow2 with GPU Server"
@@ -28,21 +33,6 @@ singleuser:
       kubespawner_override:
         extra_resource_limits:
           nvidia.com/gpu: "2"
-    - display_name: "Tensorflow2 with Four GPU Server, "
-      description: "Spawns a notebook server with access to Four GPUs, the cluster must have Four GPU node available"
-      kubespawner_override:
-        extra_resource_limits:
-          nvidia.com/gpu: "4"
-    - display_name: "Datascience environment"
-      description: "If you want the additional bells and whistles: Python, R, and Julia."
-      kubespawner_override:
-        image: jupyter/datascience-notebook:2343e33dec46
-    - display_name: "Minimal environment"
-      description: "The Minimal Jupyter"
-      kubespawner_override:
-        image: jupyter/minimal-notebook
-        extra_resource_limits:
-          nvidia.com/gpu: "0"
   defaultUrl: "/lab"
   # storage:
   #   extraVolumes:
