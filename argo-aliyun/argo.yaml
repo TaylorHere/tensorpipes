@@ -1,0 +1,357 @@
+# Source: ags/templates/argo-namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argo
+---
+# Source: ags/templates/workflow-controller-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-controller-configmap
+  namespace: tensorpipes
+data:
+  config: |
+    artifactRepository:
+      s3:
+        bucket: argo-artifacts
+        # keyPrefix: prefix/in/bucket     #optional
+        endpoint: argo-artifacts:9000        #AWS => s3.amazonaws.com; GCS => storage.googleapis.com
+        insecure: true                  #omit for S3/GCS. Needed when minio runs without TLS
+        accessKeySecret:                #omit if accessing via AWS IAM
+          name: argo-artifacts
+          key: accesskey
+        secretKeySecret:                #omit if accessing via AWS IAM
+          name: argo-artifacts
+          key: secretkey
+---
+# Source: ags/templates/argo-ui-sa.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-ui
+  namespace: tensorpipes
+---
+# Source: ags/templates/workflow-controller-sa.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo
+  namespace: tensorpipes
+---
+# Source: ags/templates/workflow-crd.yaml
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: workflows.argoproj.io
+spec:
+  group: argoproj.io
+  names:
+    kind: Workflow
+    plural: workflows
+    shortNames:
+    - wf
+  scope: Namespaced
+  version: v1alpha1
+---
+# Source: ags/templates/argo-ui-cluster-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argo-ui-cluster-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/exec
+  - pods/log
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflows
+  verbs:
+  - get
+  - list
+  - watch
+---
+# Source: ags/templates/workflow-controller-cluster-role-admin.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+  name: argo-aggregate-to-admin
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflows
+  - workflows/finalizers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+# Source: ags/templates/workflow-controller-cluster-role-edit.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  name: argo-aggregate-to-edit
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflows
+  - workflows/finalizers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+# Source: ags/templates/workflow-controller-cluster-role-view.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+  name: argo-aggregate-to-view
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflows
+  - workflows/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+---
+# Source: ags/templates/workflow-controller-cluster-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argo-cluster-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/exec
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - create
+  - delete
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflows
+  - workflows/finalizers
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+---
+# Source: ags/templates/argo-ui-cluster-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argo-ui-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-ui-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: argo-ui
+  namespace: tensorpipes
+---
+# Source: ags/templates/workflow-controller-cluster-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argo-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: argo
+  namespace: tensorpipes
+- kind: ServiceAccount
+  name: default
+  namespace: default
+---
+# Source: ags/templates/argo-ui-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: argo-ui
+  namespace: tensorpipes
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8001
+  selector:
+    app: argo-ui
+---
+# Source: ags/templates/argo-ui-deployment.yaml
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: argo-ui
+  namespace: tensorpipes
+spec:
+  selector:
+    matchLabels:
+      app: argo-ui
+  template:
+    metadata:
+      labels:
+        app: argo-ui
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: k8s.io/cluster-autoscaler
+                    operator: DoesNotExist
+      containers:
+      - env:
+        - name: ARGO_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: IN_CLUSTER
+          value: "true"
+        - name: ENABLE_WEB_CONSOLE
+          value: "false"
+        - name: BASE_HREF
+          value: /
+        image: argoproj/argoui:v2.2.0
+        name: argo-ui
+      serviceAccountName: argo-ui
+---
+# Source: ags/templates/metrics-collector.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ags-metrics-collector
+  labels:
+    owner: aliyun
+    app: ags-metrics-collector
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      owner: aliyun
+      app: ags-metrics-collector
+  template:
+    metadata:
+      labels:
+        owner: aliyun
+        app: ags-metrics-collector
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: k8s.io/cluster-autoscaler
+                    operator: DoesNotExist
+      containers:
+        - name: ags-metrics-collector
+          image: registry.cn-hangzhou.aliyuncs.com/gene-aliyun/ags-metrics-collector:v1.0.0.2-cc3b2d6-aliyun
+          imagePullPolicy: Always
+      serviceAccount: admin
+      serviceAccountName: admin
+---
+# Source: ags/templates/workflow-controller-deployment.yaml
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: workflow-controller
+  namespace: tensorpipes
+spec:
+  selector:
+    matchLabels:
+      app: workflow-controller
+  template:
+    metadata:
+      labels:
+        app: workflow-controller
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: k8s.io/cluster-autoscaler
+                    operator: DoesNotExist
+      containers:
+      - args:
+        - --configmap
+        - workflow-controller-configmap
+        - --executor-image
+        - argoproj/argoexec:v2.3.0-rc3
+        - --nonroot-executor-image
+        - registry.cn-hangzhou.aliyuncs.com/acs/argoexec:aliyun-2.2.1
+        - --workflow-workers
+        - "8"
+        - --pod-workers
+        - "8"
+        command:
+        - workflow-controller
+        image: "registry.cn-hangzhou.aliyuncs.com/gene-aliyun/workflow-controller:v2.3.1.0-7249453-aliyun"
+        name: workflow-controller
+        imagePullPolicy: Always
+      serviceAccountName: argo

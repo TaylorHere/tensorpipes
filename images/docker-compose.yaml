@@ -1,0 +1,8 @@
+version: '2'
+
+services:
+
+  tensorflow_argo:
+      build: tensorflow-argo
+      image: registry.cn-hangzhou.aliyuncs.com/taylor/tensorflow-argo:latest
+  #still cant access argo from tensorflow

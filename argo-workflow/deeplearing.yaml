@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: deeplearning-pipeline-
+spec:
+  entrypoint: pipeline
+  templates:
+  - name: trainer
+    inputs:
+      parameters:
+      - name: trainer_cmd
+      - name: trainer_image
+    container:
+      image: {{inputs.parameters.trainer_image}}
+      command: {{inputs.parameters.trainer_cmd}}
+  - name: save_model
+    container:
+      image: 
+      command: 
+  - name: pipeline
+    dag:
+      tasks:
+      - name: trainer
+        template: echo
+        arguments:
+          parameters:
+            - name: trainer_cmd
+              value: python3 train.py
+            - name: trainer_image
+              value: {{inputs.parameters.trainer_image}}
+      - name: save_model
+        template: save_model
