@@ -2,37 +2,42 @@ proxy:
   secretToken: "f38466f626312377813f9716649b32c20fcf07c44c80ef39b133a45ed25b7240"
 singleuser:
   # Defines the default image
-  serviceAccountName: argo
+  # serviceAccountName: argo
   extraEnv:
     EDITOR: "vim"
     GRANT_SUDO: "yes"
     user: "root"
   memory:
-    limit: 4G
-    guarantee: 1G
+    limits: '256Mi'
+    requests: '256Mi'
   cpu:
     limit: 1
-    guarantee: .5
+    requests: 1
+    # guarantee: .5
   image:
-    name: registry.cn-hangzhou.aliyuncs.com/taylor/tensorflow-argo
+    # name: registry.cn-hangzhou.aliyuncs.com/taylor/tensorflow-argo
+    name: jupyter/datascience-notebook
     tag: latest
   profileList:
-    - display_name: "Tensorflow2 with CPU Server"
-      description: "Tensorflow environment with CPU node"
+    - display_name: "Datascience"
+      description: "jupyter notebook for datascience"
       default: true
+    - display_name: "minimal notebook"
+      description: "jupyter minimal notebook"
       kubespawner_override:
-        extra_resource_limits:
-          nvidia.com/gpu: "0"
-    - display_name: "Tensorflow2 with GPU Server"
-      description: "Spawns a notebook server with access to a GPU, the cluster must have a GPU node available"
-      kubespawner_override:
-        extra_resource_limits:
-          nvidia.com/gpu: "1"
-    - display_name: "Tensorflow2 with DUAL GPU Server, "
-      description: "Spawns a notebook server with access to two GPUs, the cluster must have two GPU node available"
-      kubespawner_override:
-        extra_resource_limits:
-          nvidia.com/gpu: "2"
+        image: jupyter/minimal-notebook
+    # - display_name: "Tensorflow2 with CPU Server"
+    #   description: "[Not Working on This Cluster! Do click this one!]Tensorflow environment with CPU node"
+    # - display_name: "[Not Working!]Tensorflow2 with GPU Server"
+    #   description: "[Not Working on This Cluster! Do click this one!]Spawns a notebook server with access to a GPU, the cluster must have a GPU node available"
+    #   kubespawner_override:
+    #     extra_resource_limits:
+    #       nvidia.com/gpu: "1"
+    # - display_name: "[Not Working!]Tensorflow2 with DUAL GPU Server, "
+    #   description: "[Not Working on This Cluster! Do click this one!]Spawns a notebook server with access to two GPUs, the cluster must have two GPU node available"
+    #   kubespawner_override:
+    #     extra_resource_limits:
+    #       nvidia.com/gpu: "2"
   defaultUrl: "/lab"
   # storage:
   #   extraVolumes:
@@ -44,28 +49,28 @@ singleuser:
   #     - name: jupyterhub-shared
   #       mountPath: /home/shared
 
-hub:
-  extraConfig:
-    myConfig.py: |
-      c.KubeSpawner.cmd = ['jupyter-labhub']
-      c.KubeSpawner.args = ['--allow-root']
-      c.KubeSpawner.environment = {
-        'GRANT_SUDO': '1',
-        'UID': '0', # workaround https://github.com/jupyter/docker-stacks/pull/420
-      }
-      c.KubeSpawner.extra_create_kwargs = {'user': 'root'}
-  uid: 0
+# hub:
+#   extraConfig:
+#     myConfig.py: |
+#       c.KubeSpawner.cmd = ['/anaconda3/bin/jupyterhub-singleuser']
+#       c.KubeSpawner.args = ['--allow-root']
+#       c.KubeSpawner.environment = {
+#         'GRANT_SUDO': '1',
+#         'UID': '0', # workaround https://github.com/jupyter/docker-stacks/pull/420
+#       }
+#       c.KubeSpawner.extra_create_kwargs = {'user': 'root'}
+#   uid: 0
 
-auth:
-  type: github
-  admin:
-    access: true
-    users:
-      - taylorhere
-  github:
-    clientId: "1f8fc2fac00d2ff098a4"
-    clientSecret: "51efa9414c00f4f9861e089e56360975d0b2ba5d"
-    callbackUrl: "http://39.105.244.138/hub/oauth_callback"
+# auth:
+#   type: github
+#   admin:
+#     access: true
+#     users:
+#       - taylorhere
+#   github:
+#     clientId: "1f8fc2fac00d2ff098a4"
+#     clientSecret: "51efa9414c00f4f9861e089e56360975d0b2ba5d"
+#     callbackUrl: "http://106.14.62.181/hub/oauth_callback"
 
 
 
